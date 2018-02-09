@@ -14,7 +14,7 @@
 For this project, I wanted to build an application that could read books to children. In order to achieve this, I designed a workflow which performs the following steps.
 
 - Determine when a page with text is in the camera frame
-- Clean up the image using Open CV
+- Clean up the image using OpenCV
 - Perform OCR (Optical Character Recognition)
 - Transform text into audio using AWS Polly
 - Play back the audio through speakers plugged into DeepLens
@@ -53,7 +53,8 @@ There is a [test python](https://github.com/alexschultz/ReadToMe/blob/master/dee
 
 You will also need to install Tesseract and Tensorflow on your machine for this to work.
 
-To run this project on the deeplens, you will need to install Tesseract and TensorFlow for the project to work.
+To run this project on the deeplens, you will need to install Tesseract and TensorFlow.
+
 In order to get sound to play on the DeepLens, you will need to grant GreenGrass permission to use the Audio Card.
 
 Green Grass requires you to explicitly authorize all the hardware that your code has access to. One way you can configure this through the Group Resources section in the AWS IOT console. Once configured, you deploy these settings to the DeepLens which results in a JSON file getting deployed greengrass directory on the to the device.
