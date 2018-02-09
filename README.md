@@ -1,6 +1,14 @@
 # Read To Me
 ### Project submission for [AWS DeepLens Challenge](https://awsdeeplens.devpost.com/) 
 
+---
+
+<a href="http://www.youtube.com/watch?feature=player_embedded&v=fLjYKyRDDu0" target="_blank">
+<img src="http://img.youtube.com/vi/fLjYKyRDDu0/0.jpg" alt="ReadToMe" />
+</a>
+
+---
+
 #### Solution
 
 For this project, I wanted to build an application that could read books to children. In order to achieve this, I designed a workflow which performs the following steps.
@@ -52,8 +60,4 @@ To enable Audio playback through your Lambda, you need to add two resources. The
 ![IOT Console](https://github.com/alexschultz/ReadToMe/blob/master/iot.PNG)
 
 
-
-<a href="http://www.youtube.com/watch?feature=player_embedded&v=fLjYKyRDDu0" target="_blank">
-<img src="http://img.youtube.com/vi/fLjYKyRDDu0/0.jpg" alt="ReadToMe" />
-</a>
 
