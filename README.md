@@ -51,7 +51,6 @@ There is a [test python](https://github.com/alexschultz/ReadToMe/blob/master/dee
 - boto3 
 - pydub
 
-You will also need to install Tesseract and Tensorflow on your machine for this to work.
 
 To run this project on the deeplens, you will need to install Tesseract and TensorFlow.
 
@@ -65,3 +64,6 @@ To enable Audio playback through your Lambda, you need to add two resources. The
 
 
 
+In order to get the Text Area cleaned up to perform OCR, it needs to go through a number of filters. This graphic shows the steps that ReadToMe goes through with each image before trying to turn the image into text.
+
+![IOT Console](https://github.com/alexschultz/ReadToMe/blob/master/imagecleanup.PNG)
