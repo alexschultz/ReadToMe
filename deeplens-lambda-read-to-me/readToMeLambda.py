@@ -145,7 +145,7 @@ def greengrass_infinite_infer_run():
 
     except Exception as e:
         msg = "OCR failed: " + str(e)
-        speak.talk("I'm sorry, I wasn't able to read that for some reason.")
+        speak.speak("I'm sorry, I wasn't able to read that for some reason.")
         client.publish(topic=iotTopic, payload=msg)
 
     # Asynchronously schedule this function to be run again in 15 seconds
