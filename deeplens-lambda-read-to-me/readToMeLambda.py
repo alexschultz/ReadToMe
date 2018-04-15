@@ -1,60 +1,53 @@
-import logging
+import mo
 import os
-import sys
 import traceback
-from threading import Thread
-from threading import Timer
+from string import ascii_letters, digits
+from threading import Thread, Timer
+import logging
 from time import sleep
-import tensorflow as tf
-from object_detection.utils import label_map_util
+import sys
+import PIL.Image as Image
+import PIL.ImageDraw as ImageDraw
+import PIL.ImageFont as ImageFont
 import awscam
 import cv2
-import numpy as np
 import greengrasssdk
-from boto3 import client
+import numpy as np
+import pytesseract
 import speak
+from boto3 import client
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 client = greengrasssdk.client('iot-data')
 
-# The information exchanged between IoT and clould has
+# The information exchanged between IoT and CLOUD has
 # a topic and a message body.
 # This is the topic that this code uses to send messages to cloud
-iotTopic = '$aws/things/{}/infer'.format(os.environ['AWS_IOT_THING_NAME'])
+iot_topic = '$aws/things/{}/infer'.format(os.environ['AWS_IOT_THING_NAME'])
+
 ret, frame = awscam.getLastFrame()
-ret, jpeg = cv2.imencode('.jpg', frame)
+jpeg = None
 Write_To_FIFO = True
 FIRST_RUN = True
-
-MODEL_NAME = 'tensorflow-model'
-PATH_TO_CKPT = os.path.join(MODEL_NAME, 'frozen_inference_graph.pb')
-NUM_CLASSES = 1
-PATH_TO_LABELS = os.path.join(MODEL_NAME, 'object-detection.pbtxt')
-label_map = label_map_util.load_labelmap(PATH_TO_LABELS)
-categories = label_map_util.convert_label_map_to_categories(label_map, max_num_classes=NUM_CLASSES,
-                                                            use_display_name=True)
-category_index = label_map_util.create_category_index(categories)
-
-detection_graph = tf.Graph()
-with detection_graph.as_default():
-    od_graph_def = tf.GraphDef()
-    with tf.gfile.GFile(PATH_TO_CKPT, 'rb') as fid:
-        serialized_graph = fid.read()
-        od_graph_def.ParseFromString(serialized_graph)
-        tf.import_graph_def(od_graph_def, name='')
 
 
 def firstRunFunc():
     logger.info('first run')
     global FIRST_RUN
     try:
-        speak.playAudioFile("staticfiles/greeting.mp3")
+        speak.playAudioFile(os.path.join('staticfiles', 'intro.mp3'))
         sleep(0.5)
-        speak.playAudioFile("staticfiles/instructions.mp3")
+        speak.playAudioFile(os.path.join('staticfiles', 'dir1.mp3'))
+        speak.playAudioFile(os.path.join('staticfiles', 'chime.mp3'))
+        speak.playAudioFile(os.path.join('staticfiles', 'dir2.mp3'))
         sleep(1)
-        speak.playAudioFile("staticfiles/get-started.mp3")
+        speak.playAudioFile(os.path.join('staticfiles', 'dir3.mp3'))
+        sleep(.5)
+        speak.playAudioFile(os.path.join('staticfiles', 'dir4.mp3'))
+        sleep(0.5)
+        speak.playAudioFile(os.path.join('staticfiles', 'chime.mp3'))
         FIRST_RUN = False
     except:
         print("exception occurred!")
@@ -62,12 +55,45 @@ def firstRunFunc():
         traceback.print_exception(exc_type, exc_value, exc_traceback, limit=5, file=sys.stdout)
 
 
+def cleanUpTextArea(image):
+    try:
+        height, width = image.shape[:2]
+        res = cv2.resize(image, (3 * width, 3 * height), interpolation=cv2.INTER_CUBIC)
+        gray = cv2.cvtColor(res, cv2.COLOR_BGR2GRAY)
+        blur = cv2.GaussianBlur(gray, (5, 5), 0)
+        denoise = cv2.fastNlMeansDenoising(blur)
+        thresh = cv2.adaptiveThreshold(denoise, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2)
+        blur1 = cv2.GaussianBlur(thresh, (5, 5), 0)
+        final = cv2.GaussianBlur(blur1, (5, 5), 0)
+        return final
+    except Exception:
+        print("unable to display text block")
+
+
+def ocrImage(pilImage):
+    text = pytesseract.image_to_string(pilImage, lang="eng")
+    return ExtractAlphanumeric(text)
+
+
+def ExtractAlphanumeric(InputString):
+    """Remove junk characters from OCR text output.
+    Tesseract is pretty good, but sometimes it spits out a bunch of garbage characters
+    So this function strips out any non alpha numeric characteers as well as normal punctuation marks
+    before sending it off to AWS Polly to be turned into audio
+    """
+    line = InputString.replace("\n", " ")
+    return "".join([ch for ch in line if ch in (ascii_letters + digits + " " + "-" + "!" + '?')])
+
+
 def ocrTest():
     return "getting text from tesseract"
 
+
+# create a simple class that runs on its own thread so we can publish output images
+#    to the FIFO file and view using mplayer
 class FIFO_Thread(Thread):
     def __init__(self):
-        ''' Constructor. '''
+        '''Constructor.'''
         Thread.__init__(self)
 
     def run(self):
@@ -75,7 +101,8 @@ class FIFO_Thread(Thread):
         if not os.path.exists(fifo_path):
             os.mkfifo(fifo_path)
         f = open(fifo_path, 'w')
-        client.publish(topic=iotTopic, payload="Opened Pipe")
+        client.publish(topic=iot_topic, payload="Opened Pipe")
+
         while Write_To_FIFO:
             try:
                 f.write(jpeg.tobytes())
@@ -84,6 +111,25 @@ class FIFO_Thread(Thread):
 
 
 def greengrass_infinite_infer_run():
+    input_width = 300
+    input_height = 300
+    model_name = "read-to-me"
+
+    error, model_path = mo.optimize(model_name, input_width, input_height)
+
+    model = awscam.Model(model_path, {"GPU": 1})
+    client.publish(topic=iot_topic, payload="Model loaded.")
+
+    model_type = "ssd"
+
+    # load the labels into a list where the index represents the label returned by the network
+    with open('labels.txt', 'r') as f:
+        labels = [l.rstrip() for l in f]
+
+    # define the number of classifiers to see
+
+    jpeg = None
+    Write_To_FIFO = True
     logger.info('starting lambda')
     global FIRST_RUN
     logger.info('first run {}'.format(FIRST_RUN))
@@ -92,67 +138,66 @@ def greengrass_infinite_infer_run():
     try:
         input_width = 300
         input_height = 300
-        prob_thresh = 0.65
+        prob_thresh = 0.55
+        topk = 2
+        # start the FIFO thread to view the output locally
         results_thread = FIFO_Thread()
         results_thread.start()
-
-        detection_graph = tf.Graph()
-        with detection_graph.as_default():
-            od_graph_def = tf.GraphDef()
-            with tf.gfile.GFile(PATH_TO_CKPT, 'rb') as fid:
-                serialized_graph = fid.read()
-                od_graph_def.ParseFromString(serialized_graph)
-                tf.import_graph_def(od_graph_def, name='')
-
-        # Send a starting message to IoT console
-        client.publish(topic=iotTopic, payload="Text detection starts now")
-
+        # you can publish an "Inference starting" message to the AWS IoT console
+        client.publish(topic=iot_topic, payload="Inference starting")
+        # access the latest frame on the mjpeg stream
         ret, frame = awscam.getLastFrame()
         if ret == False:
             raise Exception("Failed to get frame from the stream")
 
-        yscale = float(frame.shape[0] / input_height)
-        xscale = float(frame.shape[1] / input_width)
-        with detection_graph.as_default():
-            with tf.Session(graph=detection_graph) as sess:
-                while True:
-                    # Get a frame from the video stream
-                    ret, frame = awscam.getLastFrame()
-                    # Raise an exception if failing to get a frame
-                    if ret == False:
-                        raise Exception("Failed to get frame from the stream")
+        doInfer = True
+        while doInfer:
+            # Get a frame from the video stream
+            ret, frame = awscam.getLastFrame()
+            # Raise an exception if failing to get a frame
+            if ret == False:
+                raise Exception("Failed to get frame from the stream")
 
-                    # Resize frame to fit model input requirement
-                    image_np_expanded = np.expand_dims(frame, axis=0)
-                    image_tensor = detection_graph.get_tensor_by_name('image_tensor:0')
-                    # Each box represents a part of the image where a particular object was detected.
-                    boxes = detection_graph.get_tensor_by_name('detection_boxes:0')
-                    # Each score represent how level of confidence for each of the objects.
-                    # Score is shown on the result image, together with the class label.
-                    scores = detection_graph.get_tensor_by_name('detection_scores:0')
-                    classes = detection_graph.get_tensor_by_name('detection_classes:0')
-                    num_detections = detection_graph.get_tensor_by_name('num_detections:0')
-                    # Actual detection.
-                    (boxes, scores, classes, num_detections) = sess.run(
-                        [boxes, scores, classes, num_detections],
-                        feed_dict={image_tensor: image_np_expanded})
-                    # Visualization of the results of a detection.
-                  # TODO see test script to get this working
-                    print("boxes: {}".format(len(boxes)))
+            # Resize frame to fit model input requirement
+            frameResize = cv2.resize(frame, (input_width, input_height))
+
+            # Run model inference on the resized frame
+            inferOutput = model.doInference(frameResize)
+
+            # Output inference result to the fifo file so it can be viewed with mplayer
+            parsed_results = model.parseResult(model_type, inferOutput)[model_type]
+            label = '{'
+            frameContainsText = False
+            for obj in parsed_results:
+                if obj['prob'] < prob_thresh:
+                    break
+                else:
+                    frameContainsText = True
+
+            label += '"null": 0.0'
+            label += '}'
+            client.publish(topic=iot_topic, payload=label)
+            if frameContainsText:
+                try:
+                    # tesResults = get_text_from_cv2_image(frame)
+                    client.publish(topic=iot_topic, payload='{{"output":"{}"}}'.format('found text_block'))
+                except Exception as e:
+                    msg = "ocr failed: " + str(e)
+                    client.publish(topic=iot_topic, payload=msg)
 
             global jpeg
             ret, jpeg = cv2.imencode('.jpg', frame)
-
     except Exception as e:
         msg = "OCR failed: " + str(e)
         speak.speak("I'm sorry, I wasn't able to read that for some reason.")
-        client.publish(topic=iotTopic, payload=msg)
+        msg = "Lambda function failed: " + str(e)
+        client.publish(topic=iot_topic, payload=msg)
 
     # Asynchronously schedule this function to be run again in 15 seconds
     Timer(15, greengrass_infinite_infer_run).start()
 
 
-# Execute the function above
+# run the function and view the results
 greengrass_infinite_infer_run()
 
 
