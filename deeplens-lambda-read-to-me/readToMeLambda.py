@@ -3,6 +3,7 @@ import os
 import traceback
 from string import ascii_letters, digits
 from threading import Thread, Timer
+from autocorrect import spell
 import logging
 from time import sleep
 import sys
@@ -73,7 +74,8 @@ def cleanUpTextArea(image):
 
 def ocrImage(pilImage):
     text = pytesseract.image_to_string(pilImage, lang="eng")
-    return ExtractAlphanumeric(text)
+    text = ExtractAlphanumeric(text)
+    return RunSpellCheck(text)
 
 
 def ExtractAlphanumeric(InputString):
@@ -84,6 +86,19 @@ def ExtractAlphanumeric(InputString):
     """
     line = InputString.replace("\n", " ")
     return "".join([ch for ch in line if ch in (ascii_letters + digits + " " + "-" + "!" + '?')])
+
+
+def RunSpellCheck(InputString):
+    """
+    Takes a string and attempts to correct spelling on each word
+    :param InputString:
+    :return: suggested auto corrected spelling
+    """
+    words = InputString.split(' ')
+    OutPutString = ''
+    for word in words:
+        OutPutString += spell(word) + ' '
+    return OutPutString
 
 
 def ocrTest():
@@ -140,7 +155,6 @@ def greengrass_infinite_infer_run():
         yscale = float(frame.shape[0] / input_height)
         xscale = float(frame.shape[1] / input_width)
 
-
         doInfer = True
         while doInfer:
             # Get a frame from the video stream
@@ -159,29 +173,33 @@ def greengrass_infinite_infer_run():
             parsed_results = model.parseResult(model_type, inferOutput)[model_type]
             label = ''
             frameContainsText = False
-            for obj in parsed_results:
-                if obj['prob'] > prob_thresh:
-                    print(obj)
-                    frameContainsText = True
-                    xmin = int(xscale * obj['xmin']) + int((obj['xmin'] - input_width / 2) + input_width / 2)
-                    ymin = int(yscale * obj['ymin'])
-                    xmax = int(xscale * obj['xmax']) + int((obj['xmax'] - input_width / 2) + input_width / 2)
-                    ymax = int(yscale * obj['ymax'])
-                    cv2.rectangle(frame, (xmin, ymin), (xmax, ymax), (255, 165, 20), 4)
-                    label += '{},{:.2f}'.format(outMap[obj['label']], obj['prob'])
-                    label_show = "{}:    {:.2f}%".format(outMap[obj['label']], obj['prob'] * 100)
-                    cv2.putText(frame, label_show, (xmin, ymin - 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 165, 20), 4)
-                    label += ','
-                    label += ','
-                    label += time.strftime("%Y-%m-%d %H:%M:%S")
-                    label += '\n'
+            text_blocks = filter(lambda x: x['prob'] > prob_thresh, parsed_results)
+            text_blocks.sort(key=lambda x: x['prob'])
+            # see the order of the text blocks
+            # print(text_blocks)
+            # for this lambda, we really only want to grab the highest probable text block, so just ignore the rest
+            if len(text_blocks) > 0:
+                text_blocks = text_blocks[len(text_blocks) - 1:]
 
-            if len(parsed_results) > 0:
-                client.publish(topic=iot_topic, payload=label)
+            for obj in text_blocks:
+                frameContainsText = True
+                xmin = int(xscale * obj['xmin']) + int((obj['xmin'] - input_width / 2) + input_width / 2)
+                ymin = int(yscale * obj['ymin'])
+                xmax = int(xscale * obj['xmax']) + int((obj['xmax'] - input_width / 2) + input_width / 2)
+                ymax = int(yscale * obj['ymax'])
+                cv2.rectangle(frame, (xmin, ymin), (xmax, ymax), (255, 165, 20), 4)
+                label += '{},{:.2f}'.format(outMap[obj['label']], obj['prob'])
+                label_show = "{}:    {:.2f}%".format(outMap[obj['label']], obj['prob'] * 100)
+                cv2.putText(frame, label_show, (xmin, ymin - 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 165, 20), 4)
+                label += ','
+                label += ','
+                label += time.strftime("%Y-%m-%d %H:%M:%S")
+                label += '\n'
+
             if frameContainsText:
                 try:
+                    cleanUpTextArea
                     # tesResults = get_text_from_cv2_image(frame)
-                    client.publish(topic=iot_topic, payload='{{"output":"{}"}}'.format('found text_block'))
                 except Exception as e:
                     msg = "ocr failed: " + str(e)
                     client.publish(topic=iot_topic, payload=msg)

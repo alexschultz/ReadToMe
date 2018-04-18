@@ -3,6 +3,8 @@
 
 ---
 
+Note: I am currently in the process of upgrading this project to use an optimized MXNet model instead of a TensorFlow SSD model. 'Watch' this repo to keep up with any updates to the code.
+
 <a href="http://www.youtube.com/watch?feature=player_embedded&v=fLjYKyRDDu0" target="_blank">
 <img src="http://img.youtube.com/vi/fLjYKyRDDu0/0.jpg" alt="ReadToMe" />
 </a>
@@ -22,37 +24,24 @@ For this project, I wanted to build an application that could read books to chil
 
 #### Model Training
 
-I used Tensorflow to create an object detection model. At the time of this writing, the onboard Intel Model Optimization library does not work for TensorFlow. Once it is fixed I will be able to optimize this model to run on the GPU on the DeepLens device.
+I originially used Tensorflow to create an object detection model. At the time of this writing, the onboard Intel Model Optimization library does not work for TensorFlow. Once it is fixed I will be able to optimize this model to run on the GPU on the DeepLens device.
 
-I followed this [tutorial](https://pythonprogramming.net/introduction-use-tensorflow-object-detection-api-tutorial/) which uses this [repo](https://github.com/tensorflow/models/tree/master/research/object_detection) to learn how to build my model. 
+My dataset was made from hundreds of photos of my kids' books as well as a number of library books taken in various lighting conditions, orientations, and distances.
+I used [labelImg](https://github.com/tzutalin/labelImg) to annotate my dataset with bounding boxes so I could train the model to identify Text Blocks on a page.
 
-My dataset was made from a few hundred photos of my kids' books taken in various lighting conditions, orientations, and distances.
-Following the tutorial, I used [labelImg](https://github.com/tzutalin/labelImg) to annotate my dataset with bounding boxes so I could train the model to identify Text Blocks on a page.
-
-Here is my [Custom Training Dataset](https://s3.amazonaws.com/read-to-me-dataset/2018.zip).
-
-Here is the [model](https://github.com/alexschultz/ReadToMe/blob/master/deeplens-lambda-read-to-me/tensorflow-model/frozen_inference_graph.pb) that I trained.
+I was finally able to figure out how to train my model using MXNet and I will be updating this repo in the coming days to reflect those changes.
 
 #### Architecture
 
-This project is built using GreenGrass, Python 3.6, TensorFlow, OpenCV, Tesseract, and AWS Polly.
+This project is built using GreenGrass, Python 3.6, MXNet, OpenCV, Tesseract, and AWS Polly.
 
+To run this project on the deeplens, you will need to run the following commands.
 
-#### Instructions for testing
+**sudo pip3 install --upgrade mxnet**
 
-[Packaged Lambda](https://s3.amazonaws.com/lambdas-alex/dist.zip)
+**sudo apt-get install ffmpeg**
 
-There is a [test python](https://github.com/alexschultz/ReadToMe/blob/master/deeplens-lambda-read-to-me/testModel.py) script that you can use to test the application on your development machine before deploying to the DeepLens. You will need to install a few dependancies before being able to run the application. I would recommend you create a virtual environment and pip install the following dependancies.
-
-- opencv-python
-- pillow
-- pytesseract
-- tensorflow 
-- boto3 
-- pydub
-
-
-To run this project on the deeplens, you will need to install Tesseract and TensorFlow.
+**sudo apt-get install tesseract**
 
 In order to get sound to play on the DeepLens, you will need to grant GreenGrass permission to use the Audio Card.
 
