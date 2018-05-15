@@ -156,6 +156,7 @@ def greengrass_infinite_infer_run():
         xscale = float(frame.shape[1] / input_width)
 
         doInfer = True
+        frameCount = 0
         while doInfer:
             # Get a frame from the video stream
             ret, frame = awscam.getLastFrame()
@@ -181,6 +182,7 @@ def greengrass_infinite_infer_run():
             if len(text_blocks) > 0:
                 text_blocks = text_blocks[len(text_blocks) - 1:]
 
+            roi = None
             for obj in text_blocks:
                 frameContainsText = True
                 xmin = int(xscale * obj['xmin']) + int((obj['xmin'] - input_width / 2) + input_width / 2)
@@ -188,6 +190,7 @@ def greengrass_infinite_infer_run():
                 xmax = int(xscale * obj['xmax']) + int((obj['xmax'] - input_width / 2) + input_width / 2)
                 ymax = int(yscale * obj['ymax'])
                 cv2.rectangle(frame, (xmin, ymin), (xmax, ymax), (255, 165, 20), 4)
+                roi = frame[(ymin:ymax), (xmin:xmax)]
                 label += '{},{:.2f}'.format(outMap[obj['label']], obj['prob'])
                 label_show = "{}:    {:.2f}%".format(outMap[obj['label']], obj['prob'] * 100)
                 cv2.putText(frame, label_show, (xmin, ymin - 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 165, 20), 4)
@@ -196,13 +199,21 @@ def greengrass_infinite_infer_run():
                 label += time.strftime("%Y-%m-%d %H:%M:%S")
                 label += '\n'
 
-            if frameContainsText:
-                try:
-                    cleanUpTextArea
-                    # tesResults = get_text_from_cv2_image(frame)
-                except Exception as e:
-                    msg = "ocr failed: " + str(e)
-                    client.publish(topic=iot_topic, payload=msg)
+            if frameContainsText and roi is not None:
+            	frameCount += 1
+            	if frameCount >= 3:
+	                try:
+	                    clean = cleanUpTextArea(roi)
+	                    text = ocrImage(clean)
+						textEx = ExtractAlphanumeric(text)
+						textSp = RunSpellCheck(textEx)
+						speak.speak(textSp)
+	                except Exception as e:
+	                    msg = "ocr failed: " + str(e)
+	                    client.publish(topic=iot_topic, payload=msg)
+            else:
+            	frameCount = 0
+
 
             global jpeg
             ret, jpeg = cv2.imencode('.jpg', frame)
