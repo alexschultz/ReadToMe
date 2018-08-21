@@ -24,12 +24,13 @@ iot_topic = '$aws/things/{}/infer'.format(os.environ['AWS_IOT_THING_NAME'])
 ret, frame = awscam.getLastFrame()
 Write_To_FIFO = True
 FIRST_RUN = True
+PLAY_INTRO = False
 input_width = 300
 input_height = 300
 prob_thresh = 0.60
 outMap = {1: 'text_block'}
 model_name = "read-to-me"
-occursThreshold = 3
+occursThreshold = 5
 error, model_path = mo.optimize(model_name, input_width, input_height)
 model = awscam.Model(model_path, {"GPU": 1})
 client.publish(topic=iot_topic, payload="Model loaded.")
@@ -40,17 +41,18 @@ def firstRunFunc():
     logger.info('first run')
     global FIRST_RUN
     try:
-        speak.playAudioFile(os.path.join('staticfiles', 'intro.mp3'))
-        sleep(0.5)
-        speak.playAudioFile(os.path.join('staticfiles', 'dir1.mp3'))
-        speak.playAudioFile(os.path.join('staticfiles', 'chime.mp3'))
-        speak.playAudioFile(os.path.join('staticfiles', 'dir2.mp3'))
-        sleep(1)
-        speak.playAudioFile(os.path.join('staticfiles', 'dir3.mp3'))
-        sleep(.5)
-        speak.playAudioFile(os.path.join('staticfiles', 'dir4.mp3'))
-        sleep(0.5)
-        speak.playAudioFile(os.path.join('staticfiles', 'chime.mp3'))
+        if PLAY_INTRO:
+            speak.playAudioFile(os.path.join('staticfiles', 'intro.mp3'))
+            sleep(0.5)
+            speak.playAudioFile(os.path.join('staticfiles', 'dir1.mp3'))
+            speak.playAudioFile(os.path.join('staticfiles', 'chime.mp3'))
+            speak.playAudioFile(os.path.join('staticfiles', 'dir2.mp3'))
+            sleep(1)
+            speak.playAudioFile(os.path.join('staticfiles', 'dir3.mp3'))
+            sleep(.5)
+            speak.playAudioFile(os.path.join('staticfiles', 'dir4.mp3'))
+            sleep(0.5)
+            speak.playAudioFile(os.path.join('staticfiles', 'chime.mp3'))
         FIRST_RUN = False
     except:
         print("exception occurred!")
