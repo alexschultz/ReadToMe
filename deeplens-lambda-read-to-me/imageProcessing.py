@@ -2,19 +2,19 @@ import cv2
 import numpy as np
 import pytesseract
 from autocorrect import spell
-from string import ascii_letters, digits
+from string import printable
 
 def getRoi(image, x1, x2, y1, y2):
     ht, wd, ch = image.shape
     print('height {} width {} channels {}'.format(ht, wd, ch))
-    xmin = x1
-    xmax = x2
-    ymin = y1
-    ymax = y2
-    # xmin = x1 - 10
-    # xmax = x2 + 10
-    # ymin = y1 - 10
-    # ymax = y2 + 10
+    #xmin = x1
+    #xmax = x2
+    #ymin = y1
+    #ymax = y2
+    xmin = x1 - 12
+    xmax = x2 + 12
+    ymin = y1 - 12
+    ymax = y2 + 12
 
     if xmin < 0:
         xmin = 0
@@ -73,19 +73,16 @@ def RunSpellCheck(InputString):
         OutPutString += spell(word) + ' '
     return OutPutString
 
-def RemoveBadChars(line):
+def RemoveNonUtf8BadChars(line):
     """Remove junk characters from OCR text output.
     Tesseract is pretty good, but sometimes it spits out a bunch of garbage characters
-    So this function strips out any non alpha numeric characteers as well as normal punctuation marks
-    before sending it off to AWS Polly to be turned into audio
     """
-    line = line.replace("\n", " ")
-    return "".join([ch for ch in line if ch in (ascii_letters + digits + " " + "-" + "!" + '?')])
+    return "".join([ch for ch in line if ch in printable])
 
 def ocrImage(image, extractBadChars=False, spellCheck=False):
     text = pytesseract.image_to_string(image)
     if extractBadChars:
-        text = RemoveBadChars(text)
+        text = RemoveNonUtf8BadChars(text)
     if spellCheck:
         text = RunSpellCheck(text)
     return text

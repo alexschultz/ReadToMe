@@ -27,10 +27,10 @@ FIRST_RUN = True
 PLAY_INTRO = False
 input_width = 300
 input_height = 300
-prob_thresh = 0.60
+prob_thresh = 0.55
 outMap = {1: 'text_block'}
 model_name = "read-to-me"
-occursThreshold = 5
+occursThreshold = 5 
 error, model_path = mo.optimize(model_name, input_width, input_height)
 model = awscam.Model(model_path, {"GPU": 1})
 client.publish(topic=iot_topic, payload="Model loaded.")
@@ -53,6 +53,7 @@ def firstRunFunc():
             speak.playAudioFile(os.path.join('staticfiles', 'dir4.mp3'))
             sleep(0.5)
             speak.playAudioFile(os.path.join('staticfiles', 'chime.mp3'))
+
         FIRST_RUN = False
     except:
         print("exception occurred!")
@@ -129,24 +130,19 @@ def greengrass_infinite_infer_run():
                 logger.debug('xmin {} xmax {} ymin {} ymax {}'.format(xmin, xmax, ymin, ymax))
                 label_show = "{}: conseq: {}:    {:.2f}%".format(outMap[obj['label']], occurs, obj['prob'] * 100)
                 if occurs >= (occursThreshold - 1):
-                    cv2.rectangle(frame, (xmin, ymin), (xmax, ymax), (121, 255, 20), 4)
-                    cv2.putText(frame, label_show, (xmin, ymin - 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (121, 255, 20), 4)
-                else:
-                    cv2.rectangle(frame, (xmin, ymin), (xmax, ymax), (255, 165, 20), 4)
-                    cv2.putText(frame, label_show, (xmin, ymin - 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 165, 20), 4)
-                    
-                if occurs >= occursThreshold:
                     try:
                         occurs = 0
                         logger.debug('ocr iomage')
                         tb = ip.getRoi(frame, xmin, xmax, ymin, ymax)
                         tb = ip.correctSkew(tb)
+                        cv2.rectangle(frame, (xmin, ymin), (xmax, ymax), (121, 255, 20), 4)
+                        cv2.putText(frame, label_show, (xmin, ymin - 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (121, 255, 20), 4)
                         clean = ip.cleanUpTextArea(tb)
-                        txt = ip.ocrImage(clean, extractBadChars=False, spellCheck=False)
+                        txt = ip.ocrImage(clean, extractBadChars=True, spellCheck=False)
                         if txt == '':
                             speak.speak('Sorry, I am unable to read the page. \nPlease try again.')
                         else:
-                            logger.info(txt)                    
+                            logger.info(txt)
                             speak.speak(txt)
 
                     except Exception as e:
@@ -154,6 +150,10 @@ def greengrass_infinite_infer_run():
                         cv2.imwrite(os.path.join(os.path.abspath(os.sep),'tmp', '{}-{}-{}-{}-{}.jpg'.format(time.strftime("%Y-%m-%d %H:%M:%S"),xmin, xmax, ymin, ymax)), tb)
                         client.publish(topic=iot_topic, payload=msg)
 
+                else:
+                    cv2.rectangle(frame, (xmin, ymin), (xmax, ymax), (255, 165, 20), 4)
+                    cv2.putText(frame, label_show, (xmin, ymin - 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 165, 20), 4)
+                
             else:
                 occurs = 0
 
@@ -178,3 +178,4 @@ greengrass_infinite_infer_run()
 
 def function_handler(event, context):
     return
+
