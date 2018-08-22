@@ -30,7 +30,7 @@ input_height = 300
 prob_thresh = 0.55
 outMap = {1: 'text_block'}
 model_name = "read-to-me"
-occursThreshold = 5 
+occursThreshold = 10 
 error, model_path = mo.optimize(model_name, input_width, input_height)
 model = awscam.Model(model_path, {"GPU": 1})
 client.publish(topic=iot_topic, payload="Model loaded.")
@@ -129,14 +129,15 @@ def greengrass_infinite_infer_run():
                 ymax = int(yscale * obj['ymax'])
                 logger.debug('xmin {} xmax {} ymin {} ymax {}'.format(xmin, xmax, ymin, ymax))
                 label_show = "{}: conseq: {}:    {:.2f}%".format(outMap[obj['label']], occurs, obj['prob'] * 100)
-                if occurs >= (occursThreshold - 1):
+                if occurs >= occursThreshold:
+                    cv2.rectangle(frame, (xmin, ymin), (xmax, ymax), (121, 255, 20), 4)
+                    cv2.putText(frame, label_show, (xmin, ymin - 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (121, 255, 20), 4)
+                    speak.playAudioFile(os.path.join('staticfiles', 'chime.mp3'))
                     try:
                         occurs = 0
-                        logger.debug('ocr iomage')
+                        logger.debug('ocr image')
                         tb = ip.getRoi(frame, xmin, xmax, ymin, ymax)
                         tb = ip.correctSkew(tb)
-                        cv2.rectangle(frame, (xmin, ymin), (xmax, ymax), (121, 255, 20), 4)
-                        cv2.putText(frame, label_show, (xmin, ymin - 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (121, 255, 20), 4)
                         clean = ip.cleanUpTextArea(tb)
                         txt = ip.ocrImage(clean, extractBadChars=True, spellCheck=False)
                         if txt == '':

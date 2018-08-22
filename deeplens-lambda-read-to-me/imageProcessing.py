@@ -7,10 +7,6 @@ from string import printable
 def getRoi(image, x1, x2, y1, y2):
     ht, wd, ch = image.shape
     print('height {} width {} channels {}'.format(ht, wd, ch))
-    #xmin = x1
-    #xmax = x2
-    #ymin = y1
-    #ymax = y2
     xmin = x1 - 12
     xmax = x2 + 12
     ymin = y1 - 12
@@ -41,7 +37,6 @@ def cleanUpTextArea(image):
     except Exception as e:
         print("unable to display text block")
         return e
-
 
 def correctSkew(image):
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
