@@ -3,8 +3,6 @@
 
 ---
 
-Note: I am currently in the process of upgrading this project to use an optimized MXNet model instead of a TensorFlow SSD model. 'Watch' this repo to keep up with any updates to the code.
-
 <a href="http://www.youtube.com/watch?feature=player_embedded&v=fLjYKyRDDu0" target="_blank">
 <img src="http://img.youtube.com/vi/fLjYKyRDDu0/0.jpg" alt="ReadToMe" />
 </a>
@@ -24,24 +22,27 @@ For this project, I wanted to build an application that could read books to chil
 
 #### Model Training
 
-I originially used Tensorflow to create an object detection model. At the time of this writing, the onboard Intel Model Optimization library does not work for TensorFlow. Once it is fixed I will be able to optimize this model to run on the GPU on the DeepLens device.
-
 My dataset was made from hundreds of photos of my kids' books as well as a number of library books taken in various lighting conditions, orientations, and distances.
 I used [labelImg](https://github.com/tzutalin/labelImg) to annotate my dataset with bounding boxes so I could train the model to identify Text Blocks on a page.
 
-I was finally able to figure out how to train my model using MXNet and I will be updating this repo in the coming days to reflect those changes.
+The Model was trained using MXNet using a VGG 16 model as a base. The steps used for training are outlined in this [notebook](https://github.com/alexschultz/ReadToMe/blob/master/ReadToMe%20Model%20Training.ipynb) 
+
 
 #### Architecture
 
-This project is built using GreenGrass, Python 3.6, MXNet, OpenCV, Tesseract, and AWS Polly.
+This project is built using GreenGrass, Python, MXNet, OpenCV, Tesseract, and AWS Polly.
 
-To run this project on the deeplens, you will need to run the following commands.
+To run this project on the deeplens, you will need to first install tesseract.
 
-**sudo pip3 install --upgrade mxnet**
+**sudo apt-get update && sudo apt-get install tesseract-ocr**
 
-**sudo apt-get install ffmpeg**
+The model files are located here: 
+https://github.com/alexschultz/ReadToMe/tree/master/mxnet-model
 
-**sudo apt-get install tesseract**
+You will need to tar up the files and put them in S3 when you create the project for the DeepLens.
+See the official AWS instructions here:
+https://docs.aws.amazon.com/deeplens/latest/dg/deeplens-import-external-trained.html
+ 
 
 In order to get sound to play on the DeepLens, you will need to grant GreenGrass permission to use the Audio Card.
 
@@ -52,7 +53,21 @@ To enable Audio playback through your Lambda, you need to add two resources. The
 ![IOT Console](https://github.com/alexschultz/ReadToMe/blob/master/iot.PNG)
 
 
-
 In order to get the Text Area cleaned up to perform OCR, it needs to go through a number of filters. This graphic shows the steps that ReadToMe goes through with each image before trying to turn the image into text.
 
 ![IOT Console](https://github.com/alexschultz/ReadToMe/blob/master/imagecleanup.PNG)
+
+The lambda consists of two main files. 
+
+* [readToMeLambda.py](https://github.com/alexschultz/ReadToMe/blob/master/deeplens-lambda-read-to-me/readToMeLambda.py) 
+	* Contains main workflow for project (imports imageProcessing.py)
+* [imageProcessing.py](https://github.com/alexschultz/ReadToMe/blob/master/deeplens-lambda-read-to-me/imageProcessing.py)  
+	* Contains helper functions used for image and text cleanup
+
+Because the user has no way to tell the DeepLens when a book is in front of the camera, we use the model to detect blocks of text on the page. When we find a text block, we isolate the image using the getRoi() function inside of imageProcessing.py.
+
+Another important step that is performed is correctSkew() in imageProcessing.py. This warps/rotates the text block to try to make the text horizontal. If the text is angled or skewed, there will be problems when trying to do OCR.
+
+Finally we remove any non utf-8 characters after doinc ocr. RemoveNonUtf8BadChars() in imageProcessing.py.  This step just attempts to clean up the text before turning the text to speach.
+
+If you have any questions or find any issues with this project, please open an issue, Thanks!
