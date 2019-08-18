@@ -15,11 +15,11 @@ import cv2
 
 Write_To_FIFO = True
 FIRST_RUN = True
-PLAY_INTRO = False
+PLAY_INTRO = True
 input_width = 300
 input_height = 300
 prob_thresh = 0.55
-outMap = {1: 'text_block'}
+outMap = {0: 'text_block'}
 model_name = "read-to-me"
 occursThreshold = 10
 client = greengrasssdk.client('iot-data')
@@ -32,7 +32,7 @@ model = awscam.Model(model_path, {"GPU": 1}, awscam.Runtime.DLDT)
 
 def log_message(message):
     logger.info(message)
-    client.publish(topic=iot_topic, payload=message)
+#    client.publish(topic=iot_topic, payload=message)
 
 def first_run():
     log_message('first run')
@@ -108,8 +108,11 @@ def greengrass_infinite_infer_run():
             # Resize frame to fit model input requirement
             resized_frame = cv2.resize(frame, (input_width, input_height))
             # Run model inference on the resized frame
+            # log_message('debugging before inference')
             output = model.doInference(resized_frame)
+            # log_message('debugging after inference')
             results = model.parseResult('ssd', output)['ssd']
+            # log_message('debugging after parseResult')
             text_blocks = filter(lambda x: x['prob'] > prob_thresh, results)
             # see the order of the text blocks
             # for this, we really only want to grab the highest probable text block, so just ignore the rest
@@ -125,7 +128,9 @@ def greengrass_infinite_infer_run():
                 xmax = int(xscale * obj['xmax']) + int((obj['xmax'] - input_width / 2) + input_width / 2)
                 ymax = int(yscale * obj['ymax'])
                 log_message('xmin {} xmax {} ymin {} ymax {}'.format(xmin, xmax, ymin, ymax))
+                log_message(obj)
                 label_show = "{}: conseq: {}:    {:.2f}%".format(outMap[obj['label']], occurs, obj['prob'] * 100)
+                log_message(label_show)
                 if occurs >= occursThreshold:
                     cv2.rectangle(frame, (xmin, ymin), (xmax, ymax), (121, 255, 20), 4)
                     cv2.putText(frame, label_show, (xmin, ymin - 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (121, 255, 20), 4)
@@ -152,7 +157,9 @@ def greengrass_infinite_infer_run():
                         log_message(msg)
 
                 else:
+                    log_message('showing bbox after {}'.format(occurs))
                     cv2.rectangle(frame, (xmin, ymin), (xmax, ymax), (255, 165, 20), 4)
+                    log_message('showed bbox')
                     cv2.putText(frame, label_show, (xmin, ymin - 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 165, 20), 4)
 
             else:
