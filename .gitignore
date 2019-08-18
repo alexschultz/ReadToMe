@@ -100,3 +100,15 @@ ENV/
 # mypy
 .mypy_cache/
 .idea/
+
+lambda/bin/
+
+lambda/include/
+
+lambda/lambda-package/
+
+lambda/local/
+
+lambda/package\.zip
+
+imageProcessingSample/
