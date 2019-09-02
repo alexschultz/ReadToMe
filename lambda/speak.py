@@ -1,10 +1,7 @@
 import boto3
-import io
-import os
 import sys
 from contextlib import closing
-from pydub import AudioSegment
-from pydub.playback import play
+from playsound import playsound
 
 def speak(text):
     client = boto3.client('polly', region_name='us-east-1')
@@ -14,21 +11,17 @@ def speak(text):
         TextType='text',
         VoiceId='Brian'
     )
-
-    print(response)
-
     if "AudioStream" in response:
         with closing(response["AudioStream"]) as stream:
             try:
-                data = stream.read()
-                song = AudioSegment.from_file(io.BytesIO(data), format="mp3")
-                play(song)
+                file = open('speech.mp3', 'wb')
+                file.write(stream.read())
+                file.close()
+                playsound(file, True)
             except IOError as error:
                 print(error)
                 sys.exit(-1)
 
 
 def playAudioFile(path):
-    data = open(os.path.realpath(path), 'rb').read()
-    song = AudioSegment.from_file(io.BytesIO(data), format="mp3")
-    play(song)
+    playsound(path, True)

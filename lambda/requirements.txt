@@ -11,6 +11,7 @@ idna==2.8
 jmespath==0.9.4
 kiwisolver==1.1.0
 Pillow==6.1.0
+playsound==1.2.2
 pydub==0.23.1
 pyparsing==2.4.2
 pytesseract==0.2.9
