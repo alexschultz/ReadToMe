@@ -42,7 +42,7 @@ The lambda consists of three main files.
 	* Contains main workflow for project (imports imageProcessing.py)
 * [imageProcessing.py](https://github.com/alexschultz/ReadToMe/blob/master/lambda/imageProcessing.py)
 	* Contains helper functions used for image and text cleanup
-* [imageProcessing.py](https://github.com/alexschultz/ReadToMe/blob/master/lambda/speak.py)
+* [speak.py](https://github.com/alexschultz/ReadToMe/blob/master/lambda/speak.py)
 	* Contains helper functions used to call AWS Polly and synthesize the audio
 
 Because the user has no way to tell the DeepLens when a book is in front of the camera, we use the model to detect blocks of text on the page. When we find a text block, we isolate the image using the getRoi() function inside of imageProcessing.py.
