@@ -32,9 +32,18 @@ The Model was trained using MXNet using a VGG 16 model as a base. The steps used
 
 This project is built using GreenGrass, Python, MXNet, OpenCV, Tesseract, and AWS Polly.
 
-To run this project on the deeplens, you will need to first install tesseract.
+To run this project on the deeplens, you will need to first install a few packages from a terminal in linux.
 
-**sudo apt-get update && sudo apt-get install tesseract-ocr**
+**sudo apt-get update && sudo apt-get install tesseract-ocr && apt-get install python-gi**
+
+In order to get the audio to work on DeepLens, I had to perform the following steps:
+
+1. Log into the DeepLens and take any audio .mp3 file and double click it.
+2. A prompt will open up asking you to install some required packages
+3. You will need to enter an administrator password to proceed
+![Additional Prompt](https://github.com/alexschultz/ReadToMe/blob/master/assets/additional%20prompt.png)
+
+After performing these steps, the audio should work.
 
 The model files are located here: 
 https://github.com/alexschultz/ReadToMe/tree/master/mxnet-model
@@ -42,27 +51,19 @@ https://github.com/alexschultz/ReadToMe/tree/master/mxnet-model
 You will need to tar up the files and put them in S3 when you create the project for the DeepLens.
 See the official AWS instructions here:
 https://docs.aws.amazon.com/deeplens/latest/dg/deeplens-import-external-trained.html
- 
 
-In order to get sound to play on the DeepLens, you will need to grant GreenGrass permission to use the Audio Card.
+In order to get the Text Area cleaned up to perform OCR, the program needs perform pre-processing on the image using a number of filters in OpenCV. This graphic shows an example of the steps that ReadToMe goes through with each image before trying to turn the image into text.
 
-Green Grass requires you to explicitly authorize all the hardware that your code has access to. One way you can configure this through the Group Resources section in the AWS IOT console. Once configured, you deploy these settings to the DeepLens which results in a JSON file getting deployed greengrass directory on the to the device.
+![IOT Console](https://github.com/alexschultz/ReadToMe/blob/master/assets/imagecleanup.png)
 
-To enable Audio playback through your Lambda, you need to add two resources. The sound card on the DeepLens is located at the path **“/dev/snd/”**. You need to add both **“/dev/snd/pcmC0D0p”** and **“/dev/snd/controlC0”** in order to play sound.  
+The lambda consists of three main files.
 
-![IOT Console](https://github.com/alexschultz/ReadToMe/blob/master/iot.PNG)
-
-
-In order to get the Text Area cleaned up to perform OCR, it needs to go through a number of filters. This graphic shows the steps that ReadToMe goes through with each image before trying to turn the image into text.
-
-![IOT Console](https://github.com/alexschultz/ReadToMe/blob/master/imagecleanup.PNG)
-
-The lambda consists of two main files. 
-
-* [readToMeLambda.py](https://github.com/alexschultz/ReadToMe/blob/master/deeplens-lambda-read-to-me/readToMeLambda.py) 
+* [readToMeLambda.py](https://github.com/alexschultz/ReadToMe/blob/master/lambda/readToMeLambda.py)
 	* Contains main workflow for project (imports imageProcessing.py)
-* [imageProcessing.py](https://github.com/alexschultz/ReadToMe/blob/master/deeplens-lambda-read-to-me/imageProcessing.py)  
+* [imageProcessing.py](https://github.com/alexschultz/ReadToMe/blob/master/lambda/imageProcessing.py)
 	* Contains helper functions used for image and text cleanup
+* [imageProcessing.py](https://github.com/alexschultz/ReadToMe/blob/master/lambda/speak.py)  
+	* Contains helper functions used to call AWS Polly and synthesize the audio
 
 Because the user has no way to tell the DeepLens when a book is in front of the camera, we use the model to detect blocks of text on the page. When we find a text block, we isolate the image using the getRoi() function inside of imageProcessing.py.
 
