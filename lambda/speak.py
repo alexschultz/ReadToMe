@@ -14,10 +14,10 @@ def speak(text):
     if "AudioStream" in response:
         with closing(response["AudioStream"]) as stream:
             try:
-                file = open('speech.mp3', 'wb')
+                file = open('/tmp/speech.mp3', 'wb')
                 file.write(stream.read())
                 file.close()
-                playsound(file, True)
+                playAudioFile('/tmp/speech.mp3')
             except IOError as error:
                 print(error)
                 sys.exit(-1)
