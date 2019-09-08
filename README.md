@@ -81,7 +81,7 @@ In order to build the lambda function, you will need to install the project depe
 
 To install the pip packages, cd into the lambda directory and run the following command:
 
-```pip install -f requirements.txt```
+```pip install -r requirements.txt```
 
 Once you have the pip packages installed, you need to bundle up the files into a distributable so it can be uploaded to the Lambda console.
 
